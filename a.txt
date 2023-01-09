@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 hello, Git!!!
+=======
+Hello, Git!!!
+>>>>>>> 582b8552b0f1b876a05cfb1fecd918a5d1e62d2b
