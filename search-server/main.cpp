@@ -73,17 +73,7 @@ public:
 
         for (string word : words)
         {
-            double tf = 0;
-             tf += 1.0 / words.size();
-           
-          
-            word_to_document_freqs_[word][document_id] += 1.0 / words.size();
-           // word_to_document_freqs_[word].insert({ document_id, tf});           //3.1
-            /*for (auto [id, tf] : word_to_document_freqs_[word]) 
-            {
-                cout << word << " "s << id <<" "s << tf << endl;
-            }    */       
-           // cout << word << " "s << document_id << " "s << tf << endl;
+            word_to_document_freqs_[word][document_id] += 1.0 / words.size(); //TF
         }
     }
 
@@ -126,19 +116,28 @@ private:
     Query ParseQuery(const string& text) const {
         Query query_words;
         for (const string& word : SplitIntoWordsNoStop(text)) {
-            // cout << "0"s << word << endl;
+            
             if (word[0] != '-') {
                 query_words.pluswords.insert(word);
-                // cout << "+"s <<  word << endl;
+                
             }
             else {
                 query_words.minuswords.insert(word.substr(1));
-                //  cout << "-"s <<  word.substr(1) << endl;
+               
             }
         }
 
         return query_words;
     }
+
+
+    double IdfCalculation(const string &query_ws) const {
+        double idf;
+        idf = log(document_count_ * 1.0 / word_to_document_freqs_.at(query_ws).size());
+        return idf;
+    }
+
+
 
     vector<Document> FindAllDocuments(Query &query_words) const            // 4.1
     {
@@ -149,16 +148,16 @@ private:
      
         for (const auto& documentp : query_words.pluswords)
         {
-                //cout << documentp << endl;
+                
              if (word_to_document_freqs_.count(documentp) != 0)
              {
                  for (const auto& [id, tf] : word_to_document_freqs_.at(documentp))
                  {
-                     document_to_relevance[id] += tf * log(document_count_ * 1.0 / word_to_document_freqs_.at(documentp).size());
+                    document_to_relevance[id] += tf * IdfCalculation(documentp);
                  }
              }
         }
-
+        
         for (const string& word : query_words.minuswords)
         {
             if (word_to_document_freqs_.count(word) == 0) 
@@ -174,40 +173,12 @@ private:
         for (auto& [id, relevance] : document_to_relevance)
         {
             matched_documents.push_back({ id, relevance });
-            //cout << id << " "s << relevance << endl;
+            
         }
 
         return matched_documents;
     }
-
-    /* static int MatchDocument(const DocumentContent& content, const Query query_words) {
-
-         if (query_words.pluswords.empty()) 
-         {
-             return 0;
-         }
-
-         set<string> matched_words;
-
-         for (const string& word : content.words) 
-         {
-
-             if (matched_words.count(word) != 0) 
-             {
-                 continue;
-             }
-             if (query_words.minuswords.count(word) != 0) 
-             {
-                 return 0;
-             }
-
-             if (query_words.pluswords.count(word) != 0) 
-             {
-                 matched_words.insert(word);
-             }
-         }
-         return static_cast<int>(matched_words.size());
-     }*/
+    
 };
 
 
