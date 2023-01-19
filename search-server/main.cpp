@@ -130,30 +130,29 @@ private:
         return query_words;
     }
 
-
-    double IdfCalculation(const string &query_ws) const {
-        double idf;
-        idf = log(document_count_ * 1.0 / word_to_document_freqs_.at(query_ws).size());
+    double IdfCalculation(const string& query_ws) const  //idf
+    {
+     const double idf = log(document_count_ * 1.0 / word_to_document_freqs_.at(query_ws).size());
         return idf;
     }
+    
 
 
-
-    vector<Document> FindAllDocuments(Query &query_words) const            // 4.1
+    vector<Document> FindAllDocuments(const Query &query_words) const            // 4.3
     {
         vector<Document> matched_documents;
         map<int, double> document_to_relevance;                       
         vector<int> doc_delete;
-        
-     
+
         for (const auto& documentp : query_words.pluswords)
         {
-                
              if (word_to_document_freqs_.count(documentp) != 0)
              {
+                 const double Idf = IdfCalculation(documentp);  //idf
+
                  for (const auto& [id, tf] : word_to_document_freqs_.at(documentp))
                  {
-                    document_to_relevance[id] += tf * IdfCalculation(documentp);
+                    document_to_relevance[id] += tf * Idf;
                  }
              }
         }
