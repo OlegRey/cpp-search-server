@@ -12,6 +12,7 @@
 #include <cstdlib>
 #include <iomanip>
 
+
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
@@ -312,8 +313,6 @@ void RunTestImpl(T& func, const string& func_name) {
 //        abort();
 //    }
 //}
-//
-//
 
 void AssertImpl(bool value, const string& expr_str, const string& file, const string& func, unsigned line,
     const string& hint) {
@@ -329,7 +328,7 @@ void AssertImpl(bool value, const string& expr_str, const string& file, const st
 }
 
 #define RUN_TEST(func) RunTestImpl((func), #func) 
-//#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
+#define ASSERT_EQUAL(a, b) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, ""s)
 //#define ASSERT_EQUAL_HINT(a, b, hint) AssertEqualImpl((a), (b), #a, #b, __FILE__, __FUNCTION__, __LINE__, (hint))
 #define ASSERT(expr) AssertImpl(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, ""s)
 //#define ASSERT_HINT(expr, hint) AssertImpl(!!(expr), #expr, __FILE__, __FUNCTION__, __LINE__, (hint))
@@ -423,9 +422,51 @@ void TestPred() {
 void TestStatus() {
     SearchServer server;
     server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
-    server.AddDocument(1, "ухоженный скворец евгений"s, DocumentStatus::BANNED, { 9 });
-    const auto docs = server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED);
-    ASSERT(docs[0].id == 1);
+    server.AddDocument(1, "серый кот и модный ошейник"s, DocumentStatus::BANNED, { 9 });
+    server.AddDocument(2, "черный кот и модный ошейник"s, DocumentStatus::IRRELEVANT, { 8, -3 });
+    server.AddDocument(3, "пятнистый кот и модный ошейник"s, DocumentStatus::REMOVED, { 9 });
+    const auto docs = server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::ACTUAL);
+    ASSERT(docs[0].id == 0);
+    {
+        SearchServer server;
+        server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+        server.AddDocument(1, "серый кот и модный ошейник"s, DocumentStatus::BANNED, { 9 });
+        server.AddDocument(2, "черный кот и модный ошейник"s, DocumentStatus::IRRELEVANT, { 8, -3 });
+        server.AddDocument(3, "пятнистый кот и модный ошейник"s, DocumentStatus::REMOVED, { 9 });
+        const auto docs = server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::BANNED);
+        ASSERT(docs[0].id == 1);
+    }
+    {
+        SearchServer server;
+        server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+        server.AddDocument(1, "серый кот и модный ошейник"s, DocumentStatus::BANNED, { 9 });
+        server.AddDocument(2, "черный кот и модный ошейник"s, DocumentStatus::IRRELEVANT, { 8, -3 });
+        server.AddDocument(3, "пятнистый кот и модный ошейник"s, DocumentStatus::REMOVED, { 9 });
+        const auto docs = server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::IRRELEVANT);
+        ASSERT(docs[0].id == 2);
+    }
+    {
+        SearchServer server;
+        server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+        server.AddDocument(1, "серый кот и модный ошейник"s, DocumentStatus::BANNED, { 9 });
+        server.AddDocument(2, "черный кот и модный ошейник"s, DocumentStatus::IRRELEVANT, { 8, -3 });
+        server.AddDocument(3, "пятнистый кот и модный ошейник"s, DocumentStatus::REMOVED, { 9 });
+        const auto docs = server.FindTopDocuments("пушистый ухоженный кот"s, DocumentStatus::REMOVED);
+        ASSERT(docs[0].id == 3);
+    }
+   }
+
+void TestRelevance() {
+    SearchServer server;
+   // const double EPSILON = 1e-6;
+    server.SetStopWords("и в на"s);
+    server.AddDocument(0, "белый кот и модный ошейник"s, DocumentStatus::ACTUAL, { 8, -3 });
+    server.AddDocument(1, "пушистый кот пушистый хвост"s, DocumentStatus::ACTUAL, { 7, 2, 7 });
+    server.AddDocument(2, "ухоженный пёс выразительные глаза"s, DocumentStatus::ACTUAL, { 5, -12, 2, 1 });
+    const auto docs = server.FindTopDocuments("пушистый ухоженный кот"s);
+    ASSERT(fabs(docs[0].relevance - 0.650672) < EPSILON);
+    ASSERT(fabs(docs[1].relevance - 0.274653) < EPSILON);
+    ASSERT(fabs(docs[2].relevance - 0.101366) < EPSILON);
 }
 
 // Функция TestSearchServer является точкой входа для запуска тестов
@@ -437,7 +478,7 @@ void TestSearchServer() {
     RUN_TEST(TestRating);
     RUN_TEST(TestPred);
     RUN_TEST(TestStatus);
-    
+    RUN_TEST(TestRelevance);
 }
 
 // --------- Окончание модульных тестов поисковой системы -----------
