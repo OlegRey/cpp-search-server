@@ -7,10 +7,12 @@
 #include <utility>
 #include <vector>
 #include <optional>
+#include <numeric>
 
 using namespace std;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
+const double EPSILON = 1e-6;
 
 string ReadLine() {
     string s;
@@ -109,10 +111,19 @@ public:
 
     void AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) { //v5
         //[[nodiscard]] bool AddDocument(int document_id, const string& document, DocumentStatus status, const vector<int>& ratings) { //v4
-        if (document_id < 0 || documents_.count(document_id) > 0 || !IsValidWord(document)) {
+        if (document_id < 0 ) {
             //return false; //v4
-            throw invalid_argument("Ошибка добавления документа"s);
+            throw invalid_argument("Ошибка id документа не может быть отрицательным"s);
         }
+        if (documents_.count(document_id) > 0 ) {
+            //return false; //v4
+            throw invalid_argument("Ошибка id документа уже существует"s);
+        }
+        if (!IsValidWord(document)) {
+            //return false; //v4
+            throw invalid_argument("Ошибка в документе спец-символы"s);
+        }
+
         else {
             const vector<string> words = SplitIntoWordsNoStop(document);
             const double inv_word_count = 1.0 / words.size();
@@ -127,19 +138,19 @@ public:
     template <typename DocumentPredicate>
     vector<Document> FindTopDocuments(const string& raw_query, DocumentPredicate document_predicate) const { //v5
     
-        for (auto word : SplitIntoWords(raw_query)) {
+        /*for (auto word : SplitIntoWords(raw_query)) {
             
             if ((word.empty() || !IsValidWord(word)) || (word[0] == '-' && word[1] == '-') || (word[0] == '-' && word.size() == 1) || (word[word.size() - 1] == '-')) {
                 throw invalid_argument("Ошибка запроса"s);
             }
-        }
+        }*/
         
         const Query query = ParseQuery(raw_query);
         auto matched_documents = FindAllDocuments(query, document_predicate);
 
         sort(matched_documents.begin(), matched_documents.end(),
             [](const Document& lhs, const Document& rhs) {
-                if (abs(lhs.relevance - rhs.relevance) < 1e-6) {
+                if (abs(lhs.relevance - rhs.relevance) < EPSILON/*1e-6*/) {
                     return lhs.rating > rhs.rating;
                 }
                 else {
@@ -176,12 +187,12 @@ public:
     }
     tuple<vector<string>, DocumentStatus> MatchDocument(const string& raw_query, int document_id) const { //v5
         
-        for (auto word : SplitIntoWords(raw_query)) {
+       /* for (auto word : SplitIntoWords(raw_query)) {
             
             if ((word.empty() || !IsValidWord(word)) || (word[0] == '-' && word[1] == '-') || (word[0] == '-' && word.size() == 1) || (word[word.size() - 1] == '-')) {
                 throw invalid_argument("Ошибка запроса"s);
             }
-        }
+        }*/
         const Query query = ParseQuery(raw_query);
         vector<string> matched_words;
         for (const string& word : query.plus_words) {
@@ -239,12 +250,10 @@ private:
         if (ratings.empty()) {
             return 0;
         }
-        int rating_sum = 0;
-        for (const int rating : ratings) {
-            rating_sum += rating;
-        }
+        int rating_sum = accumulate(ratings.begin(), ratings.end(), 0);
         return rating_sum / static_cast<int>(ratings.size());
     }
+    
 
     struct QueryWord {
         string data;
@@ -253,6 +262,26 @@ private:
     };
 
     QueryWord ParseQueryWord(string text) const {
+
+        for (auto word : SplitIntoWords(text)) {
+
+            if (word.empty())  {
+                throw invalid_argument("Ошибка запрос не может быть пустым"s);
+            }
+            if (!IsValidWord(word)) {
+                throw invalid_argument("Ошибка в запросе не могут быть спец-символы"s);
+            }
+            if (word[0] == '-' && word.size() == 1) {
+                throw invalid_argument("Ошибка \"-\" не может быть словом запроса"s);
+            }
+            if (word[0] == '-' && word[1] == '-') {
+                throw invalid_argument("Ошибка запроса нельзя использовать двойной минус \"--слово\""s);
+            }
+            if (word[word.size() - 1] == '-') {
+                throw invalid_argument("Ошибка запроса нельзя использовать \"слово-\" в конце слова"s);
+            }
+        }
+
         bool is_minus = false;
         // Word shouldn't be empty
         if (text[0] == '-') {
