@@ -103,9 +103,9 @@ public:
     // explicit SearchServer(const string& stop_words_text)  //v5
     explicit SearchServer(const string& stop_words_text) : SearchServer(SplitIntoWords(stop_words_text))  // Invoke delegating constructor from string container
     { //v4
-        if (!IsValidWord(stop_words_text)) {
+        /*if (!IsValidWord(stop_words_text)) {
             throw invalid_argument("Ошибка стоп-слов"s);
-        }
+        }*/
         
     }
 
