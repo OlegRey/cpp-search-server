@@ -26,4 +26,9 @@ int main() {
     // первый запрос удален, 1437 запросов с нулевым результатом
     request_queue.AddFindRequest("sparrow"s);
     cout << "Total empty requests: "s << request_queue.GetNoResultRequests() << endl;
+
+    for (const Document& document : search_server.FindTopDocuments("big cat"s)) {
+        PrintDocument(document);
+        //cout << document << endl;
+    }
 }
