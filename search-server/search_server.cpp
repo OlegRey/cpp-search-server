@@ -71,12 +71,13 @@ const std::map<std::string, double>& SearchServer::GetWordFrequencies(int docume
     return document_to_word_freqs_.count(document_id) == 0 ? empty_request : document_to_word_freqs_.at(document_id);
 }
 
-void SearchServer::RemoveDocument(int document_id) {      //v1
+void SearchServer::RemoveDocument(int document_id) { //v1
+
+    word_to_document_freqs_.clear(); //v2
     document_to_word_freqs_.erase(document_id);
     document_ids_.erase(document_id);
     documents_.erase(document_id);
-    
-    //documents_.erase(document_ids_.erase(document_to_word_freqs_.erase(document_id)));
+
 }
 bool SearchServer::IsStopWord(const std::string& word) const {
     return stop_words_.count(word) > 0;
