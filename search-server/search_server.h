@@ -1,5 +1,5 @@
 #pragma once
-
+//#include <iostream>
 #include <string>
 #include <vector>
 #include <algorithm>
@@ -14,19 +14,18 @@ using namespace std::string_literals;
 
 const int MAX_RESULT_DOCUMENT_COUNT = 5;
 
-
 class SearchServer {
 public:
 
     template <typename StringContainer>
-    SearchServer(const StringContainer& stop_words);/* : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {}*/
+    explicit SearchServer(const StringContainer& stop_words);/* : stop_words_(MakeUniqueNonEmptyStrings(stop_words)) {}*/
     
     explicit SearchServer(const std::string& stop_words_text): SearchServer(SplitIntoWords(stop_words_text)) {}
 
     void AddDocument(int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
 
     template <typename DocumentPredicate>
-    std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentPredicate document_predicate) const; //3
+    std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentPredicate document_predicate) const; 
     
     std::vector<Document> FindTopDocuments(const std::string& raw_query, DocumentStatus status) const;
 
@@ -34,9 +33,17 @@ public:
 
     int GetDocumentCount() const;
 
-    int GetDocumentId(int index) const;
+   // int GetDocumentId(int index) const; //удалить
+
+    auto begin() const noexcept -> std::set<int>::const_iterator;
+ 
+    auto end() const noexcept -> std::set<int>::const_iterator;
 
     std::tuple<std::vector<std::string>, DocumentStatus> MatchDocument(const std::string& raw_query, int document_id) const;
+
+    const std::map<std::string, double>& GetWordFrequencies(int document_id) const;
+
+    void RemoveDocument(int document_id);
 
 private:
     struct DocumentData {
@@ -48,9 +55,11 @@ private:
 
     std::map<std::string, std::map<int, double>> word_to_document_freqs_;
 
+    std::map<int, std::map<std::string, double>> document_to_word_freqs_; //v1
+
     std::map<int, DocumentData> documents_;
 
-    std::vector<int> document_ids_;
+    std::set<int> document_ids_; // vector/set v1
 
     bool IsStopWord(const std::string& word) const;
 
@@ -134,10 +143,3 @@ std::vector<Document> SearchServer::FindAllDocuments(const Query& query, Documen
     }
     return matched_documents;
 }
-
-void AddDocument(SearchServer& search_server, int document_id, const std::string& document, DocumentStatus status, const std::vector<int>& ratings);
-
-void FindTopDocuments(const SearchServer& search_server, const std::string& raw_query);
-
-void MatchDocuments(const SearchServer& search_server, const std::string& query);
-
