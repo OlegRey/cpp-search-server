@@ -46,7 +46,8 @@ const std::set<int>::const_iterator SearchServer::end() const noexcept {
 }
 
 std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDocument(std::string_view raw_query, int document_id) const {
-    const Query query = ParseQuery(raw_query);
+   // const Query query = ParseQuery(raw_query); v3
+    const Query query = ParseQuery(raw_query, false);
 
     std::vector<std::string_view> matched_words;
     for (const std::string_view word : query.minus_words) {
@@ -79,7 +80,8 @@ std::tuple<std::vector<std::string_view>, DocumentStatus> SearchServer::MatchDoc
         throw std::invalid_argument("document_id out of range"s);
     }
 
-    const Query& query = ParseQueryParallel(raw_query);
+   // const Query& query = ParseQueryParallel(raw_query); v3
+    const Query& query = ParseQuery(raw_query, false);
     const auto& word_freqs = document_to_word_freqs_.at(document_id);
 
     if (std::any_of(query.minus_words.begin(),
@@ -182,53 +184,100 @@ SearchServer::QueryWord SearchServer::ParseQueryWord(std::string_view text) cons
     return { text, is_minus, IsStopWord(text) };
 }
 
-SearchServer::Query SearchServer::ParseQuery(std::string_view text) const {
-    Query result;
+//SearchServer::Query SearchServer::ParseQuery(std::string_view text) const {
+//    Query result;
+//
+//    for (auto word : SplitIntoWordsView(text)) {
+//        const QueryWord query_word = ParseQueryWord(word);
+//        if (!query_word.is_stop) {
+//            if (query_word.is_minus) {
+//                result.minus_words.push_back(query_word.data);
+//            }
+//            else {
+//                result.plus_words.push_back(query_word.data);
+//            }
+//        }
+//    }
+//
+//    sort(result.minus_words.begin(), result.minus_words.end());
+//    sort(result.plus_words.begin(), result.plus_words.end());
+//
+//    auto last_minus = unique(result.minus_words.begin(), result.minus_words.end());
+//    auto last_plus = unique(result.plus_words.begin(), result.plus_words.end());
+//
+//    size_t newSize = last_minus - result.minus_words.begin();
+//    result.minus_words.resize(newSize);
+//
+//    newSize = last_plus - result.plus_words.begin();
+//    result.plus_words.resize(newSize);
+//
+//    return result;
+//}
 
-    for (auto word : SplitIntoWordsView(text)) {
-        const QueryWord query_word = ParseQueryWord(word);
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                result.minus_words.push_back(query_word.data);
-            }
-            else {
-                result.plus_words.push_back(query_word.data);
+//SearchServer::Query SearchServer::ParseQueryParallel(std::string_view text) const {
+//    Query result;
+//
+//    for (auto word : SplitIntoWordsView(text)) {
+//        const QueryWord query_word(ParseQueryWord(word));
+//        if (!query_word.is_stop) {
+//            if (query_word.is_minus) {
+//                result.minus_words.push_back(query_word.data);
+//            }
+//            else {
+//                result.plus_words.push_back(query_word.data);
+//            }
+//        }
+//    }
+//    return result;
+//}
+SearchServer::Query SearchServer::ParseQuery(std::string_view text, bool parallel) const {
+    if (!parallel) {
+        Query result;
+
+        for (auto word : SplitIntoWordsView(text)) {
+            const QueryWord query_word = ParseQueryWord(word);
+            if (!query_word.is_stop) {
+                if (query_word.is_minus) {
+                    result.minus_words.push_back(query_word.data);
+                }
+                else {
+                    result.plus_words.push_back(query_word.data);
+                }
             }
         }
+
+        sort(result.minus_words.begin(), result.minus_words.end());
+        sort(result.plus_words.begin(), result.plus_words.end());
+
+        auto last_minus = unique(result.minus_words.begin(), result.minus_words.end());
+        auto last_plus = unique(result.plus_words.begin(), result.plus_words.end());
+
+        size_t newSize = last_minus - result.minus_words.begin();
+        result.minus_words.resize(newSize);
+
+        newSize = last_plus - result.plus_words.begin();
+        result.plus_words.resize(newSize);
+
+        return result;
     }
+    else {
+        Query result;
 
-    sort(result.minus_words.begin(), result.minus_words.end());
-    sort(result.plus_words.begin(), result.plus_words.end());
-
-    auto last_minus = unique(result.minus_words.begin(), result.minus_words.end());
-    auto last_plus = unique(result.plus_words.begin(), result.plus_words.end());
-
-    size_t newSize = last_minus - result.minus_words.begin();
-    result.minus_words.resize(newSize);
-
-    newSize = last_plus - result.plus_words.begin();
-    result.plus_words.resize(newSize);
-
-    return result;
-}
-
-SearchServer::Query SearchServer::ParseQueryParallel(std::string_view text) const {
-    Query result;
-
-    for (auto word : SplitIntoWordsView(text)) {
-        const QueryWord query_word(ParseQueryWord(word));
-        if (!query_word.is_stop) {
-            if (query_word.is_minus) {
-                result.minus_words.push_back(query_word.data);
-            }
-            else {
-                result.plus_words.push_back(query_word.data);
+        for (auto word : SplitIntoWordsView(text)) {
+            const QueryWord query_word(ParseQueryWord(word));
+            if (!query_word.is_stop) {
+                if (query_word.is_minus) {
+                    result.minus_words.push_back(query_word.data);
+                }
+                else {
+                    result.plus_words.push_back(query_word.data);
+                }
             }
         }
+        return result;
     }
-    return result;
 }
 
-double SearchServer::ComputeWordInverseDocumentFreq(std::string_view word) const {
-    return std::log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
-}
+    double SearchServer::ComputeWordInverseDocumentFreq(std::string_view word) const {
+        return std::log(GetDocumentCount() * 1.0 / word_to_document_freqs_.at(word).size());
+    }
